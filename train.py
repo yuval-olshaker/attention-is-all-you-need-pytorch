@@ -200,7 +200,7 @@ def main():
     parser.add_argument('-train_path', default=None)   # bpe encoded data
     parser.add_argument('-val_path', default=None)     # bpe encoded data
 
-    parser.add_argument('-epoch', type=int, default=5)
+    parser.add_argument('-epoch', type=int, default=50)
     parser.add_argument('-b', '--batch_size', type=int, default=2)
 
     parser.add_argument('-d_model', type=int, default=128)

@@ -67,7 +67,7 @@ class Encoder(nn.Module):
         enc_slf_attn_list = []
 
         # -- Forward
-        
+
         enc_output = self.dropout(self.position_enc(self.src_word_emb(src_seq)))
         enc_output = self.layer_norm(enc_output)
 
@@ -141,6 +141,18 @@ class Transformer(nn.Module):
             n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
             pad_idx=trg_pad_idx, dropout=dropout)
 
+        self.encoder2 = Encoder(
+            n_src_vocab=n_src_vocab, n_position=n_position,
+            d_word_vec=d_word_vec, d_model=d_model, d_inner=d_inner,
+            n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
+            pad_idx=src_pad_idx, dropout=dropout)
+
+        self.decoder2 = Decoder(
+            n_trg_vocab=n_trg_vocab, n_position=n_position,
+            d_word_vec=d_word_vec, d_model=d_model, d_inner=d_inner,
+            n_layers=n_layers, n_head=n_head, d_k=d_k, d_v=d_v,
+            pad_idx=trg_pad_idx, dropout=dropout)
+
         self.trg_word_prj = nn.Linear(d_model, n_trg_vocab, bias=False)
 
         for p in self.parameters():
@@ -165,9 +177,13 @@ class Transformer(nn.Module):
 
         src_mask = get_pad_mask(src_seq, self.src_pad_idx)
         trg_mask = get_pad_mask(trg_seq, self.trg_pad_idx) & get_subsequent_mask(trg_seq)
-
         enc_output, *_ = self.encoder(src_seq, src_mask)
         dec_output, *_ = self.decoder(trg_seq, trg_mask, enc_output, src_mask)
         seq_logit = self.trg_word_prj(dec_output) * self.x_logit_scale
+        seq_logit = torch.argmax(seq_logit,dim=2)
+        src2_mask = get_pad_mask(seq_logit, self.trg_pad_idx) & get_subsequent_mask(seq_logit)
+        enc_output2, *_ = self.encoder2(seq_logit, src2_mask)
+        dec_output2, *_ = self.decoder2(trg_seq, trg_mask, enc_output2, src2_mask)
 
+        seq_logit = self.trg_word_prj(dec_output2) * self.x_logit_scale
         return seq_logit.view(-1, seq_logit.size(2))
