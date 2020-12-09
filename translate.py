@@ -32,7 +32,8 @@ def load_model(opt, device):
         d_inner=model_opt.d_inner_hid,
         n_layers=model_opt.n_layers,
         n_head=model_opt.n_head,
-        dropout=model_opt.dropout).to(device)
+        dropout=model_opt.dropout,
+        n_position=412).to(device)
 
     model.load_state_dict(checkpoint['model'])
     print('[Info] Trained model state loaded.')

@@ -200,17 +200,17 @@ def main():
     parser.add_argument('-train_path', default=None)   # bpe encoded data
     parser.add_argument('-val_path', default=None)     # bpe encoded data
 
-    parser.add_argument('-epoch', type=int, default=10)
-    parser.add_argument('-b', '--batch_size', type=int, default=2048)
+    parser.add_argument('-epoch', type=int, default=5)
+    parser.add_argument('-b', '--batch_size', type=int, default=2)
 
-    parser.add_argument('-d_model', type=int, default=512)
-    parser.add_argument('-d_inner_hid', type=int, default=2048)
+    parser.add_argument('-d_model', type=int, default=128)
+    parser.add_argument('-d_inner_hid', type=int, default=256)
     parser.add_argument('-d_k', type=int, default=64)
     parser.add_argument('-d_v', type=int, default=64)
 
     parser.add_argument('-n_head', type=int, default=8)
-    parser.add_argument('-n_layers', type=int, default=6)
-    parser.add_argument('-warmup','--n_warmup_steps', type=int, default=4000)
+    parser.add_argument('-n_layers', type=int, default=3)
+    parser.add_argument('-warmup','--n_warmup_steps', type=int, default=1)
 
     parser.add_argument('-dropout', type=float, default=0.1)
     parser.add_argument('-embs_share_weight', action='store_true')
@@ -230,12 +230,6 @@ def main():
     if not opt.log and not opt.save_model:
         print('No experiment result will be saved.')
         raise
-
-    if opt.batch_size < 2048 and opt.n_warmup_steps <= 4000:
-        print('[Warning] The warmup steps may be not enough.\n'\
-              '(sz_b, warmup) = (2048, 4000) is the official setting.\n'\
-              'Using smaller batch w/o longer warmup may cause '\
-              'the warmup stage ends with only little data trained.')
 
     device = torch.device('cuda' if opt.cuda else 'cpu')
 
@@ -264,7 +258,8 @@ def main():
         d_inner=opt.d_inner_hid,
         n_layers=opt.n_layers,
         n_head=opt.n_head,
-        dropout=opt.dropout).to(device)
+        dropout=opt.dropout,
+        n_position=412).to(device)
 
     optimizer = ScheduledOptim(
         optim.Adam(transformer.parameters(), betas=(0.9, 0.98), eps=1e-09),
@@ -290,12 +285,12 @@ def prepare_dataloaders_from_bpe_files(opt, device):
     train = TranslationDataset(
         fields=fields,
         path=opt.train_path, 
-        exts=('.src', '.trg'),
+        exts=('.ll', '.hl'),
         filter_pred=filter_examples_with_length)
     val = TranslationDataset(
         fields=fields,
         path=opt.val_path, 
-        exts=('.src', '.trg'),
+        exts=('.ll', '.hl'),
         filter_pred=filter_examples_with_length)
 
     opt.max_token_seq_len = MAX_LEN + 2
