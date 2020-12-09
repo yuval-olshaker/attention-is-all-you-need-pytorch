@@ -179,11 +179,13 @@ class Transformer(nn.Module):
         trg_mask = get_pad_mask(trg_seq, self.trg_pad_idx) & get_subsequent_mask(trg_seq)
         enc_output, *_ = self.encoder(src_seq, src_mask)
         dec_output, *_ = self.decoder(trg_seq, trg_mask, enc_output, src_mask)
+        # preper for second
         seq_logit = self.trg_word_prj(dec_output) * self.x_logit_scale
         seq_logit = torch.argmax(seq_logit,dim=2)
         src2_mask = get_pad_mask(seq_logit, self.trg_pad_idx) & get_subsequent_mask(seq_logit)
+        # run second
         enc_output2, *_ = self.encoder2(seq_logit, src2_mask)
         dec_output2, *_ = self.decoder2(trg_seq, trg_mask, enc_output2, src2_mask)
-
+        # wrap it and return
         seq_logit = self.trg_word_prj(dec_output2) * self.x_logit_scale
         return seq_logit.view(-1, seq_logit.size(2))
