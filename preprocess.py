@@ -330,7 +330,61 @@ def main_wo_bpe():
     print('[Info] Dumping the processed data to pickle file', opt.save_data)
     pickle.dump(data, open(opt.save_data, 'wb'))
 
+def get_base(data_dir, type_name):
+    return os.path.join(data_dir, type_name + '0.corpus.')
+
+
+def get_files_path(data_dir, type_name):
+    base = get_base(data_dir, type_name)
+    return base + 'll', base + 'hl'
+
+
+def my_main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-data_dir', required=True)
+    parser.add_argument('-save_data', required=True)
+    parser.add_argument('-max_len', type=int, default=100)
+    parser.add_argument(
+        '--min-frequency', type=int, default=6, metavar='FREQ',
+        help='Stop if no symbol pair has frequency >= FREQ (default: %(default)s))')
+    parser.add_argument('--dict-input', action="store_true",
+        help="If set, input file is interpreted as a dictionary where each line contains a word-count pair")
+    parser.add_argument(
+        '--separator', type=str, default='@@', metavar='STR',
+        help="Separator between non-final subword units (default: '%(default)s'))")
+    parser.add_argument('--total-symbols', '-t', action="store_true")
+    opt = parser.parse_args()
+
+    data_dir = opt.data_dir
+    # Merge files into one.
+    field = torchtext.data.Field(
+        tokenize=str.split,
+        lower=True,
+        pad_token=Constants.PAD_WORD,
+        init_token=Constants.BOS_WORD,
+        eos_token=Constants.EOS_WORD)
+
+    fields = (field, field)
+
+    def filter_examples_with_length(x):
+        return len(vars(x)['src']) <= opt.max_len and len(vars(x)['trg']) <= opt.max_len
+
+    train = TranslationDataset(
+        fields=fields,
+        path=get_base(data_dir, 'train'),
+        exts=('ll', 'hl'),
+        filter_pred=filter_examples_with_length)
+
+    from itertools import chain
+    field.build_vocab(chain(train.src, train.trg), min_freq=2)
+
+    data = { 'settings': opt, 'vocab': field, }
+    opt.save_data = os.path.join(opt.data_dir, opt.save_data)
+
+    print('[Info] Dumping the processed data to pickle file', opt.save_data)
+    pickle.dump(data, open(opt.save_data, 'wb'))
 
 if __name__ == '__main__':
-    main_wo_bpe()
+    my_main()
+    # main_wo_bpe()
     #main()
